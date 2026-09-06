@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f1e8">
-  <title>ComponentBox — Scan Dashboard</title>
+  <meta name="theme-color" content="#082f2c">
+  <title>ComponentBox Scan Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
@@ -38,7 +38,12 @@
       <header class="topbar">
         <button class="menu-button" ng-click="vm.mobileMenuOpen = !vm.mobileMenuOpen" aria-label="Toggle menu">☰</button>
         <div class="breadcrumb"><span>Workspace</span><b>/</b>Scan dashboard</div>
-        <div class="top-actions"><div class="avatar" title="ComponentBox workspace">CB</div></div>
+        <div class="top-actions">
+          <div class="top-status" ng-class="{offline: !vm.apiOnline}">
+            <span></span>{{vm.apiOnline ? 'Scanner online' : 'Demo mode'}}
+          </div>
+          <div class="avatar" title="ComponentBox workspace">CB</div>
+        </div>
       </header>
 
       <section class="content" id="overview">
@@ -48,9 +53,22 @@
             <h1>See every component clearly.</h1>
             <p class="subtitle">Upload a camera image, identify the part, and correct uncertain results in one focused workspace.</p>
           </div>
-          <div>
+          <div class="hero-actions">
+            <div class="vision-card" aria-hidden="true">
+              <div class="vision-topline">
+                <span class="vision-live"><i></i>VISION READY</span>
+                <span>ESP32 CAM</span>
+              </div>
+              <div class="vision-stage">
+                <span class="scan-corner tl"></span><span class="scan-corner tr"></span>
+                <span class="scan-corner bl"></span><span class="scan-corner br"></span>
+                <div class="vision-chip"><b>SCAN</b><small>component ready</small></div>
+                <div class="scan-beam"></div>
+              </div>
+              <div class="vision-footer"><span>5 component classes</span><strong>LIVE</strong></div>
+            </div>
             <input id="scan-upload" class="visually-hidden" type="file" accept="image/*">
-            <button class="primary-button" ng-click="vm.startScan()" ng-disabled="vm.pendingUpload">
+            <button class="primary-button hero-upload" ng-click="vm.startScan()" ng-disabled="vm.pendingUpload">
               <span>{{vm.pendingUpload ? '...' : '＋'}}</span> {{vm.pendingUpload ? 'Analyzing scan' : 'Upload component image'}}
             </button>
           </div>
@@ -88,8 +106,8 @@
             <h2>{{vm.scanResult.value || 'Unknown component'}}</h2>
             <p class="result-message">{{vm.scanResult.message}}</p>
             <div class="result-grid">
-              <div><span>Recommended component</span><strong>{{vm.scanResult.value || '—'}}</strong></div>
-              <div><span>Confidence</span><strong>{{vm.scanResult.confidence || '—'}}{{vm.scanResult.confidence ? '%' : ''}}</strong></div>
+              <div><span>Recommended component</span><strong>{{vm.scanResult.value || 'Not available'}}</strong></div>
+              <div><span>Confidence</span><strong>{{vm.scanResult.confidence || 'Not available'}}{{vm.scanResult.confidence ? '%' : ''}}</strong></div>
               <div><span>Model</span><strong>{{vm.scanResult.modelVersion || 'Dataset needed'}}</strong></div>
             </div>
           </div>
@@ -264,8 +282,8 @@
         <h2 id="scan-modal-title">{{vm.selectedScan.value || 'Unknown component'}}</h2>
         <p class="filename">{{vm.selectedScan.filename}}</p>
         <div class="detail-row"><span>Detection status</span><strong>{{vm.statusLabel(vm.selectedScan.status)}}</strong></div>
-        <div class="detail-row"><span>Recommended component</span><strong>{{vm.selectedScan.value || '—'}}</strong></div>
-        <div class="detail-row"><span>Confidence</span><strong>{{vm.selectedScan.confidence || '—'}}{{vm.selectedScan.confidence ? '%' : ''}}</strong></div>
+        <div class="detail-row"><span>Recommended component</span><strong>{{vm.selectedScan.value || 'Not available'}}</strong></div>
+        <div class="detail-row"><span>Confidence</span><strong>{{vm.selectedScan.confidence || 'Not available'}}{{vm.selectedScan.confidence ? '%' : ''}}</strong></div>
         <div class="detail-row"><span>Captured</span><strong>{{vm.selectedScan.timeLabel}}</strong></div>
         <div class="detail-row" ng-if="vm.selectedScan.modelVersion"><span>Model</span><strong>{{vm.selectedScan.modelVersion}}</strong></div>
         <div class="detail-row"><span>Reviewed</span><strong>{{vm.selectedScan.reviewed ? 'Yes' : 'No'}}</strong></div>
