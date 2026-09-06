@@ -44,7 +44,7 @@ class ComponentScanHistoryResponse(BaseModel):
 
 
 class ComponentCorrectionRequest(BaseModel):
-    component: str
+    component: str = Field(min_length=1, max_length=80)
     save_to_dataset: bool = True
 
 

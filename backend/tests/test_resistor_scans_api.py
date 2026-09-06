@@ -271,6 +271,29 @@ def test_component_correction_reviews_scan_and_exports_dataset(monkeypatch):
     assert list((components.scan_store.dataset_dir / "capacitor").glob("*.jpg"))
 
 
+def test_component_correction_accepts_a_custom_manual_label(monkeypatch):
+    monkeypatch.setattr(components, "rate_limiter", AcceptingLimiter())
+    monkeypatch.setattr(components, "classifier", UnknownClassifier())
+    client = TestClient(app)
+
+    scan_response = client.post(
+        "/api/component-scans",
+        files={"image": ("component.jpg", b"fake-image-bytes", "image/jpeg")},
+    )
+    scan_id = scan_response.json()["scan_id"]
+    response = client.patch(
+        f"/api/component-scans/{scan_id}/correction",
+        json={"component": "Light sensor module", "save_to_dataset": True},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["reviewed"] is True
+    assert payload["corrected_component"] == "Light sensor module"
+    assert payload["recommended_component"] == "Light sensor module"
+    assert not (components.scan_store.dataset_dir / "Light sensor module").exists()
+
+
 def test_component_scan_can_be_added_to_inventory(monkeypatch):
     monkeypatch.setattr(components, "rate_limiter", AcceptingLimiter())
     monkeypatch.setattr(components, "classifier", SuccessfulClassifier())

@@ -61,32 +61,52 @@ class ComponentScanStore:
 
     def correct_scan(self, scan_id: str, component: str, save_to_dataset: bool = True) -> ComponentScanResponse:
         self._reload()
-        normalized = component.strip().lower()
-        if normalized not in SUPPORTED_COMPONENTS:
-            raise ValueError(f"Unsupported component '{component}'.")
+        normalized = " ".join(component.strip().split())
+        if not normalized:
+            raise ValueError("Component label cannot be empty.")
+        known_component = normalized.lower() if normalized.lower() in SUPPORTED_COMPONENTS else None
 
         for index, scan in enumerate(self._scans):
             if scan.scan_id != scan_id:
                 continue
 
+            reviewed_path = self._move_to_reviewed(scan)
             updated = scan.model_copy(
                 update={
                     "success": True,
                     "status": "component_detected",
                     "message": "Component label confirmed.",
                     "recommended_component": normalized,
-                    "component_class": normalized,
+                    "component_class": known_component or normalized,
                     "reviewed": True,
                     "corrected_component": normalized,
+                    "saved_image_path": reviewed_path or scan.saved_image_path,
                 }
             )
-            if save_to_dataset and scan.saved_image_path:
+            if save_to_dataset and known_component:
                 self._copy_to_dataset(updated)
             self._scans[index] = updated
             self._save()
             return updated
 
         raise KeyError(scan_id)
+
+    def _move_to_reviewed(self, scan: ComponentScanResponse) -> str | None:
+        if not scan.saved_image_path:
+            return None
+
+        source = self._resolved_saved_image_path(scan.saved_image_path)
+        if not source.exists():
+            return scan.saved_image_path
+
+        reviewed_dir = self.image_dir / "reviewed"
+        reviewed_dir.mkdir(parents=True, exist_ok=True)
+        destination = reviewed_dir / source.name
+        if source.resolve() != destination.resolve():
+            if destination.exists():
+                destination.unlink()
+            shutil.move(str(source), str(destination))
+        return self._stored_path(destination)
 
     def mark_added_to_inventory(self, scan_id: str) -> ComponentScanResponse:
         self._reload()

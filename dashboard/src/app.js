@@ -18,6 +18,12 @@
       vm.scanResult = null;
       vm.latestScanSeenAt = null;
       vm.pendingUpload = false;
+      vm.reviewDeckOpen = false;
+      vm.reviewLabel = '';
+      vm.reviewSaving = false;
+      vm.reviewLeaving = false;
+      vm.reviewComplete = false;
+      vm.reviewDeckStarted = false;
       vm.toast = '';
       vm.apiOnline = false;
       vm.activeSection = 'overview';
@@ -94,6 +100,23 @@
         vm.mobileMenuOpen = false;
         if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
       };
+
+      vm.unreviewedScans = function () {
+        return vm.displayedScans().filter(function (item) { return !item.reviewed; });
+      };
+
+      vm.reviewedScans = function () {
+        return vm.displayedScans().filter(function (item) { return item.reviewed; });
+      };
+
+      vm.currentReview = function () { return vm.unreviewedScans()[0] || null; };
+      vm.openReviewDeck = openReviewDeck;
+      vm.closeReviewDeck = function () {
+        vm.reviewDeckOpen = false;
+        vm.reviewComplete = false;
+      };
+      vm.chooseReviewLabel = function (component) { vm.reviewLabel = component; };
+      vm.confirmReview = confirmReview;
       vm.clearFilters = function () {
         vm.search = '';
         vm.statusFilter = 'all';
@@ -130,6 +153,7 @@
           var result = normalizeScanResponse(response.data, file.name, previewUrl);
           vm.scanResult = result;
           addScanIfNew(result);
+          if (!result.reviewed) openReviewDeck(result);
           showToast(result.success ? 'Component detected' : statusLabel(result.status));
         }).catch(function (error) {
           vm.apiOnline = false;
@@ -215,6 +239,7 @@
           vm.latestScanSeenAt = response.data.scan.captured_at;
           vm.scanResult = latest;
           replaceScan(latest);
+          if (!latest.reviewed) openReviewDeck(latest);
         }).catch(function () {
           vm.apiOnline = false;
         }).finally(function () {
@@ -237,6 +262,10 @@
           if (vm.scans.length) {
             vm.scanResult = vm.scans[0];
             vm.latestScanSeenAt = vm.scans[0].capturedAtRaw;
+          }
+          if (!vm.reviewDeckStarted && vm.unreviewedScans().length) {
+            vm.reviewDeckStarted = true;
+            openReviewDeck();
           }
         }).catch(function () {
           vm.apiOnline = false;
@@ -263,14 +292,14 @@
       }
 
       function correctScan(item, component) {
-        if (!component) return;
+        if (!component) return Promise.reject();
         if (!item.scanId) {
           applyCorrection(item, component);
           showToast('Demo scan label updated');
-          return;
+          return Promise.resolve(item);
         }
 
-        $http.patch(apiBaseUrl + '/api/component-scans/' + item.scanId + '/correction', {
+        return $http.patch(apiBaseUrl + '/api/component-scans/' + item.scanId + '/correction', {
           component: component,
           save_to_dataset: true
         }).then(function (response) {
@@ -281,6 +310,43 @@
           showToast('Label saved for training');
         }).catch(function (error) {
           showToast(apiErrorMessage(error));
+          throw error;
+        });
+      }
+
+      function openReviewDeck(item) {
+        if (!vm.unreviewedScans().length) return;
+        vm.reviewDeckOpen = true;
+        vm.reviewComplete = false;
+        vm.reviewLeaving = false;
+        vm.reviewDeckStarted = true;
+        vm.reviewLabel = (item || vm.currentReview()).component || '';
+      }
+
+      function confirmReview() {
+        var item = vm.currentReview();
+        var label = (vm.reviewLabel || '').trim();
+        if (!item || vm.reviewSaving) return;
+        if (!label) {
+          showToast('Enter or choose the correct component name');
+          return;
+        }
+
+        vm.reviewSaving = true;
+        correctScan(item, label).then(function () {
+          vm.reviewLeaving = true;
+          $timeout(function () {
+            vm.reviewLeaving = false;
+            vm.reviewSaving = false;
+            if (vm.unreviewedScans().length) {
+              vm.reviewLabel = vm.currentReview().component || '';
+            } else {
+              vm.reviewComplete = true;
+              vm.reviewLabel = '';
+            }
+          }, 360);
+        }).catch(function () {
+          vm.reviewSaving = false;
         });
       }
 
@@ -369,7 +435,7 @@
       pollLatestScan();
 
       $document.on('keydown', function (event) {
-        if (event.key === 'Escape') { vm.selectedScan = null; vm.scans.forEach(function (item) { item.menuOpen = false; }); }
+        if (event.key === 'Escape') { vm.selectedScan = null; vm.closeReviewDeck(); vm.scans.forEach(function (item) { item.menuOpen = false; }); }
         if (event.key === '/' && event.target.tagName !== 'INPUT') {
           event.preventDefault();
           var input = document.querySelector('.search-box input');

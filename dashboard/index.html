@@ -20,6 +20,7 @@
 
       <nav aria-label="Main navigation">
         <button class="nav-item" ng-class="{active: vm.activeSection === 'overview'}" ng-click="vm.goTo('overview')"><span class="nav-icon">⌂</span>Overview</button>
+        <button class="nav-item" ng-class="{active: vm.activeSection === 'review-board'}" ng-click="vm.goTo('review-board')"><span class="nav-icon">✓</span>Review scans <span class="nav-count">{{vm.unreviewedScans().length}}</span></button>
         <button class="nav-item" ng-class="{active: vm.activeSection === 'scan-gallery'}" ng-click="vm.goTo('scan-gallery')"><span class="nav-icon">▧</span>Scan gallery <span class="nav-count">{{vm.scans.length}}</span></button>
         <button class="nav-item" ng-click="vm.startScan()"><span class="nav-icon">◎</span>Upload a scan</button>
       </nav>
@@ -62,11 +63,11 @@
           </article>
           <article class="stat-card">
             <div class="stat-icon yellow">✓</div>
-            <div><p>Identified</p><strong>{{vm.countByStatus('identified')}}</strong><small>{{vm.identificationRate()}}% success rate</small></div>
+            <div><p>Reviewed</p><strong>{{vm.reviewedScans().length}}</strong><small>Confirmed by a person</small></div>
           </article>
           <article class="stat-card">
             <div class="stat-icon coral">!</div>
-            <div><p>Unknown</p><strong>{{vm.countByStatus('review')}}</strong><small>Collect more training images</small></div>
+            <div><p>Needs review</p><strong>{{vm.unreviewedScans().length}}</strong><small>Waiting for confirmation</small></div>
           </article>
           <article class="stat-card camera-status">
             <div><p>System status</p><strong><span class="status-dot" ng-class="{offline: !vm.apiOnline}"></span>{{vm.apiOnline ? 'Ready to scan' : 'Demo mode'}}</strong><small>{{vm.apiOnline ? 'Recognition service connected' : 'Start the backend to analyze images'}}</small></div>
@@ -91,6 +92,43 @@
               <div><span>Confidence</span><strong>{{vm.scanResult.confidence || '—'}}{{vm.scanResult.confidence ? '%' : ''}}</strong></div>
               <div><span>Model</span><strong>{{vm.scanResult.modelVersion || 'Dataset needed'}}</strong></div>
             </div>
+          </div>
+        </section>
+
+        <section class="review-board" id="review-board" aria-labelledby="review-board-title">
+          <div class="review-heading">
+            <div>
+              <p class="eyebrow">HUMAN CHECK</p>
+              <h2 id="review-board-title">Review workspace</h2>
+              <p>Check what the camera found and correct anything that does not look right.</p>
+            </div>
+            <button class="primary-button" ng-click="vm.openReviewDeck()" ng-disabled="!vm.unreviewedScans().length">
+              <span>◇</span> {{vm.unreviewedScans().length ? 'Start review' : 'All caught up'}}
+            </button>
+          </div>
+
+          <div class="review-columns">
+            <article class="review-column pending-column">
+              <div class="review-column-title"><div><i></i><h3>Not reviewed</h3></div><b>{{vm.unreviewedScans().length}}</b></div>
+              <p>New camera images appear here first.</p>
+              <div class="review-thumbnails" ng-if="vm.unreviewedScans().length">
+                <button ng-repeat="scan in vm.unreviewedScans() | limitTo:4 track by scan.id" ng-click="vm.openReviewDeck(scan)" aria-label="Review {{scan.filename}}">
+                  <img ng-src="{{scan.image}}" alt=""><span>{{scan.value || 'Unknown'}}</span>
+                </button>
+              </div>
+              <div class="mini-empty" ng-if="!vm.unreviewedScans().length"><span>✓</span>Nothing is waiting for review</div>
+            </article>
+
+            <article class="review-column reviewed-column">
+              <div class="review-column-title"><div><i></i><h3>Reviewed</h3></div><b>{{vm.reviewedScans().length}}</b></div>
+              <p>Confirmed and corrected images are kept here.</p>
+              <div class="review-thumbnails" ng-if="vm.reviewedScans().length">
+                <button ng-repeat="scan in vm.reviewedScans() | limitTo:4 track by scan.id" ng-click="vm.openScan(scan)" aria-label="Open {{scan.filename}}">
+                  <img ng-src="{{scan.image}}" alt=""><span>{{scan.value || 'Unknown'}}</span><em>✓</em>
+                </button>
+              </div>
+              <div class="mini-empty" ng-if="!vm.reviewedScans().length"><span>◇</span>Reviewed images will appear here</div>
+            </article>
           </div>
         </section>
 
@@ -170,6 +208,51 @@
         </section>
       </section>
     </main>
+  </div>
+
+  <div class="review-overlay" ng-if="vm.reviewDeckOpen" role="dialog" aria-modal="true" aria-labelledby="review-deck-title">
+    <div class="review-glow"></div>
+    <button class="review-close" ng-click="vm.closeReviewDeck()" aria-label="Review later">×</button>
+    <section class="review-deck-shell" ng-if="!vm.reviewComplete">
+      <div class="review-progress">
+        <div><span>Review queue</span><strong>{{vm.unreviewedScans().length}} remaining</strong></div>
+        <div class="progress-track"><i ng-style="{width: (vm.reviewedScans().length / vm.displayedScans().length * 100 || 0) + '%'}"></i></div>
+      </div>
+      <div class="deck-stage">
+        <div class="deck-card deck-card-back back-two"></div>
+        <div class="deck-card deck-card-back back-one"></div>
+        <article class="deck-card deck-card-front" ng-class="{'is-leaving': vm.reviewLeaving}">
+          <div class="deck-image">
+            <img ng-src="{{vm.currentReview().image}}" alt="Component waiting for review">
+            <span class="scan-number">Next scan</span>
+          </div>
+          <div class="deck-form">
+            <p class="eyebrow">CAMERA RESULT</p>
+            <h2 id="review-deck-title">Is this label correct?</h2>
+            <div class="camera-guess">
+              <div><span>Detected as</span><strong>{{vm.currentReview().value || 'Unknown component'}}</strong></div>
+              <b ng-if="vm.currentReview().confidence !== null && vm.currentReview().confidence !== undefined">{{vm.currentReview().confidence}}%</b>
+            </div>
+            <label class="review-input-label" for="review-label">Correct component name</label>
+            <input id="review-label" class="review-input" type="text" ng-model="vm.reviewLabel" maxlength="80" placeholder="Type the correct name" autocomplete="off">
+            <div class="quick-labels" aria-label="Common component labels">
+              <button ng-repeat="component in vm.componentOptions" ng-class="{selected: vm.reviewLabel === component.value}" ng-click="vm.chooseReviewLabel(component.value)">{{component.label}}</button>
+            </div>
+            <button class="confirm-review" ng-click="vm.confirmReview()" ng-disabled="vm.reviewSaving || !vm.reviewLabel.trim()">
+              <span>✓</span>{{vm.reviewSaving ? 'Saving review' : 'Confirm and show next'}}
+            </button>
+            <button class="review-later" ng-click="vm.closeReviewDeck()">Review later</button>
+          </div>
+        </article>
+      </div>
+    </section>
+    <section class="review-finished" ng-if="vm.reviewComplete">
+      <div class="finished-check">✓</div>
+      <p class="eyebrow">QUEUE COMPLETE</p>
+      <h2>Every image is reviewed</h2>
+      <p>Your confirmed images are now organized in the Reviewed section.</p>
+      <button class="primary-button" ng-click="vm.closeReviewDeck(); vm.goTo('review-board')">View reviewed images</button>
+    </section>
   </div>
 
   <div class="modal-backdrop" ng-if="vm.selectedScan" ng-click="vm.closeModal($event)">
