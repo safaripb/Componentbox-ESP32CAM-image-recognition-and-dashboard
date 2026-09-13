@@ -6,10 +6,9 @@ ComponentBox helps electronics students, makers, and lab teams turn loose compon
 
 ![image capturing](<img width="1280" height="571" alt="image" src="https://github.com/user-attachments/assets/0a73ead8-9031-4e76-907d-7c8b0c4142bd" />
 )
-![dashboard](<img width="1280" height="423" alt="image" src="https://github.com/user-attachments/assets/fc80b179-1a3d-49e7-953f-bb3e2d0458b9" />
 
+![dashboard](<img width="1280" height="571" alt="image" src="https://github.com/user-attachments/assets/fc80b179-1a3d-49e7-953f-bb3e2d0458b9" />
 )
-
 ## Supported Components
 
 The current classifier workflow supports one component per image across five classes:
