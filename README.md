@@ -4,7 +4,11 @@
 
 ComponentBox helps electronics students, makers, and lab teams turn loose component bins into a searchable inventory. An ESP32-CAM or dashboard upload captures a component image, a FastAPI backend runs a MobileNetV2-style classifier, and the dashboard lets a human review the result, correct labels, and grow the training dataset over time.
 
-![ESP32-CAM sample hardware](assets/sample_images/esp32.jpg)
+![image capturing](<img width="1280" height="571" alt="image" src="https://github.com/user-attachments/assets/0a73ead8-9031-4e76-907d-7c8b0c4142bd" />
+)
+![dashboard](<img width="1280" height="423" alt="image" src="https://github.com/user-attachments/assets/fc80b179-1a3d-49e7-953f-bb3e2d0458b9" />
+
+)
 
 ## Supported Components
 
