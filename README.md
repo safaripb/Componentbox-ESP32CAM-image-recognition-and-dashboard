@@ -7,6 +7,8 @@ ComponentBox helps electronics students, makers, and lab teams turn loose compon
 
 <img width="1280" height="571" alt="image" src="https://github.com/user-attachments/assets/025ce4cb-0092-48e0-a9c0-c77c35b05310" />
 <img width="1280" height="423" alt="image" src="https://github.com/user-attachments/assets/196fb201-3bd4-4766-bd9e-eb5d6666e860" />
+<img width="1280" height="580" alt="image" src="https://github.com/user-attachments/assets/630e3a07-d0fd-4285-a699-8622750efafb" />
+
 
 ## Supported Components
 
